@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, AppState, Button, Text, TextInput, View } from "react-native";
 import * as Notifications from 'expo-notifications';
+import { useSound } from "./hooks/useSound";
 
 
 Notifications.setNotificationHandler({
@@ -11,41 +12,41 @@ Notifications.setNotificationHandler({
     }),
   });
 
+const scheduleNotification = (time = 1) => {
+console.log(`Setting notification for ${time} seconds from now`)
+Notifications.scheduleNotificationAsync({
+    content: {
+        title: 'Background Timer',
+        body: `Timer set ${time} seconds ago`,
+    },
+    trigger: {
+        seconds: time
+    },
+    });
+}
+
+const cancelNotifications = () => {
+    console.log("Cancelling notifications");
+    Notifications.cancelAllScheduledNotificationsAsync()
+}
+
 export default function Timer() {
 
+    const [time, setTime] = useState('10');
+    const [isTimerRunning, setIsTimerRunning] = useState(false);
+    const [timerDisplay, setTimerDisplay] = useState(10);
+    
+    const appState = useRef(AppState.currentState);
+    const timeRemaining = useRef(timerDisplay);
+    const timeAtBackground = useRef(null);
 
-    const scheduleNotification = (time = 1) => {
-        console.log(`Setting notification for ${time} seconds from now`)
-        Notifications.scheduleNotificationAsync({
-            content: {
-              title: 'Background Timer',
-              body: `Timer set ${time} seconds ago`,
-            },
-            trigger: {
-                seconds: time
-            },
-          });
-    }
-
-    const cancelNotifications = () => {
-        console.log("Cancelling notifications");
-        Notifications.cancelAllScheduledNotificationsAsync()
-    }
+    const [playSound] = useSound(require('./assets/chime.mp3'));
 
     const parseTime = (timeStr) => {
         let parsed = parseInt(timeStr);
         if(isNaN(parsed)) return 0;
         return parsed;
     }
-
-    const [time, setTime] = useState('10');
-    const [isTimerRunning, setIsTimerRunning] = useState(false);
-    const [timerDisplay, setTimerDisplay] = useState(10);
-    
-    const timeRemaining = useRef(timerDisplay);
-
-    const appState = useRef(AppState.currentState);
-    const timeAtBackground = useRef(null);
 
     useEffect(() => {
         const subscription = AppState.addEventListener('change', nextAppState => {
@@ -98,11 +99,20 @@ export default function Timer() {
         }
     }, [isTimerRunning, timerDisplay])
 
+    const toggleTimer = () => {
+        if(isTimerRunning) {
+            setIsTimerRunning(true);
+            playSound();
+        } else {
+            setIsTimerRunning(false);
+        }
+    }
+
 
     return <View>
         <Text>Set time in seconds</Text>
         <TextInput style={{'borderWidth': 1, 'borderColor': '#111'}} onChangeText={setTime} value={time} inputMode="numeric" />
         <Text>{timerDisplay}</Text>
-        <Button title={isTimerRunning ? 'Pause Timer' : 'Start Timer'} onPress={() => {setIsTimerRunning(current => !current)}} />
+        <Button title={isTimerRunning ? 'Pause Timer' : 'Start Timer'} onPress={toggleTimer} />
     </View>
 }
